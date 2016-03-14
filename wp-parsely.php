@@ -312,7 +312,7 @@ class Parsely {
         // TODO: Maping of an install's post types to Parse.ly post types (namely page/post)
         $parselyPage = array(
             "@context" => "http://schema.org",
-            "@type" => "WebPage"
+            "@type" => "NewsArticle"
         );
         $currentURL = $this->get_current_url();
         if ( is_single() && $post->post_status == 'publish' ) {
@@ -339,13 +339,31 @@ class Parsely {
             $tags = array_unique($tags);
 
             $parselyPage['@type']          = 'NewsArticle';
+            $parselyPage['mainEntityOfPage'] = array(
+                '@type' => 'WebPage',
+                '@id' => get_permalink()
+            );
             $parselyPage['headline']       = $this->get_clean_parsely_page_value(get_the_title());
             $parselyPage['url']            = get_permalink();
             $parselyPage['thumbnailUrl']   = $image_url;
+            $parselyPage['image']          = array(
+                '@type' => 'ImageObject',
+                'url' => $image_url
+            );
             $parselyPage['articleId']      = $postId;
             $parselyPage['dateCreated']    = gmdate('Y-m-d\TH:i:s\Z', get_post_time('U', true));
+            $parselyPage['datePublished']  = gmdate('Y-m-d\TH:i:s\Z', get_post_time('U', true));
+            $parselyPage['dateModified']   = gmdate('Y-m-d\TH:i:s\Z', get_the_modified_date('U', true));
             $parselyPage['articleSection'] = $category;
+             $parselyPage['author']        = array(
+                '@type' => 'Person',
+                'name' => $authors
+            );
             $parselyPage['creator']        = $authors;
+            $parselyPage['publisher']      = array(
+                '@type' => 'Organization',
+                'name' => get_bloginfo('name')
+            ); 
             $parselyPage['keywords']       = $tags;
         } elseif ( is_page() && $post->post_status == 'publish' ) {
             $parselyPage['headline']       = $this->get_clean_parsely_page_value(get_the_title());
