@@ -46,6 +46,7 @@ class Parsely {
     private $optionDefaults     = array('apikey' => '',
                                         'content_id_prefix' => '',
                                         'use_top_level_cats' => false,
+                                        'use_custom_field_section' => false,
                                         'cats_as_tags' => false,
                                         'track_authenticated_users' => true,
                                         'lowercase_tags' => true);
@@ -152,18 +153,37 @@ class Parsely {
                            Parsely::MENU_SLUG, 'optional_settings',
                            $field_args);
 
+        // Use custom fields to populate articleSection in parselyPage
+        //TODO: add dropdown menu listing a user's custom fields
+        //TODO: remove placeholder array below
+        $customfields = array('field 1', 'field 2', 'field 3');
+        $h = 'wp-parsely will use a custom field assigned to a post. ' .
+             'With this option selected, if you have a custom field called "people" ' .
+             'and assign it the value "James", wp-parsely will use the "James" for the ' .
+             'section name in your dashboard instead of the post category. Otherwise, ' .
+             'the section value defaults to your post\'s category <br>' .
+        add_custom_fields_dropdown();
+        add_settings_field('use_custom_field_section',
+                           'Use Custom Field for Section  <div class="help-icons"></div>',
+                           array($this, 'print_binary_radio_tag'),
+                           Parsely::MENU_SLUG, 'optional_settings',
+                           array('option_key' => 'use_custom_field_section',
+                                 'help_text' => $h,
+                                 'requires_recrawl' => true));
+
         // Use top-level cats
         $h = 'wp-parsely will use the first category assigned to a post. ' .
              'With this option selected, if you post a story to News > ' .
              'National > Florida, wp-parsely will use the "News" for the ' .
-             'section name instead of "Florida".';
+             'section name in your dashboard instead of "Florida".';
         add_settings_field('use_top_level_cats',
-                           'Use Top-Level Categories <div class="help-icons"></div>',
+                           'Use Top-Level Categories for Section <div class="help-icons"></div>',
                            array($this, 'print_binary_radio_tag'),
                            Parsely::MENU_SLUG, 'optional_settings',
                            array('option_key' => 'use_top_level_cats',
                                  'help_text' => $h,
                                  'requires_recrawl' => true));
+
 
         // Use categories as tags
         $h = 'You can use this option to ensure all assigned categories will ' .
@@ -205,6 +225,21 @@ class Parsely {
 
     }
 
+    public function add_custom_fields_dropdown(){
+        //retrieve post custom fields (returns array)
+        // $customfields = get_post_custom();
+        //line below is just to see if i can get this function to fire
+        $menu = '<p>hi</p>';
+        // $menu = '<select class="custom_fields_dropdown" name="custom_fields_dropdown">';
+        // foreach ($customfields as $field) {
+        //     $menu .= '<option value="' + $field + '">' + $field + '</option>';
+        // };
+        // $menu .= "</select>";
+        echo $menu;
+    }
+
+
+
     public function validate_options($input) {
         if ( empty($input['apikey']) ) {
             add_settings_error(Parsely::OPTIONS_KEY, 'apikey',
@@ -221,6 +256,14 @@ class Parsely {
 
         // Content ID prefix
         $input['content_id_prefix'] = sanitize_text_field($input['content_id_prefix']);
+
+        // Custom fields as section
+        if ( $input['use_custom_field_section'] !== 'true' && $input['use_custom_field_section'] !== 'false' ) {
+            add_settings_error(Parsely::OPTIONS_KEY, 'use_custom_field_section',
+                               'Value passed for use_custom_field_section must be either "true" or "false".');
+        } else {
+            $input['use_custom_field_section'] = $input['use_custom_field_section'] === 'true' ? true : false;
+        }
 
         // Top-level categories
         if ( $input['use_top_level_cats'] !== 'true' && $input['use_top_level_cats'] !== 'false' ) {
@@ -260,7 +303,6 @@ class Parsely {
     public function print_required_settings() {
         // We can optionally print some text here in the future, but we don't
         // need to now
-        return;
     }
 
     public function print_optional_settings() {
@@ -350,7 +392,6 @@ class Parsely {
                 '@type' => 'ImageObject',
                 'url' => $image_url
             );
-            $parselyPage['articleId']      = $postId;
             $parselyPage['dateCreated']    = gmdate('Y-m-d\TH:i:s\Z', get_post_time('U', true));
             $parselyPage['datePublished']  = gmdate('Y-m-d\TH:i:s\Z', get_post_time('U', true));
             $parselyPage['dateModified']   = gmdate('Y-m-d\TH:i:s\Z', get_the_modified_date('U', true));
@@ -590,15 +631,18 @@ class Parsely {
     }
 
     /**
-    * Returns a properly cleaned category name and will optionally use the top-level category name if so instructed
-    * to via the `use_top_level_cats` option.
+    * Returns a properly cleaned category name and will optionally use a custom field if so instructed via the 
+    * `use_custom_field_section` option, or the top-level category name if so instructed to via the `use_top_level_cats` option
     */
     private function get_category_name($postObj, $parselyOptions) {
         $category   = get_the_category($postObj->ID);
 
         // Customers with different post types may not have categories
-        if ( !empty($category) ) {
-            $category   = $parselyOptions['use_top_level_cats'] ? $this->get_top_level_category($category[0]->cat_ID) : $category[0]->name;
+        if ( !empty($category) && $parselyOptions['use_custom_field_section'] ) {
+            // grab value for field key selected in dropdown -- the below almost certainly won't work
+            $category = $_POST['custom_fields_dropdown'];
+        } elseif ( !empty($category) ) {
+            $category = $parselyOptions['use_top_level_cats'] ? $this->get_top_level_category($category[0]->cat_ID) : $category[0]->name;
         } else {
             $category = 'Uncategorized';
         }
