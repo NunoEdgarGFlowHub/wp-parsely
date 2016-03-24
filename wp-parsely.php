@@ -154,14 +154,12 @@ class Parsely {
                            $field_args);
 
         // Use custom fields to populate articleSection in parselyPage
-        //TODO: add dropdown menu listing a user's custom fields
-        //TODO: remove placeholder array below
-        $customfields = array('field 1', 'field 2', 'field 3');
         $h = 'wp-parsely will use a custom field assigned to a post. ' .
              'With this option selected, if you have a custom field called "people" ' .
              'and assign it the value "James", wp-parsely will use the "James" for the ' .
              'section name in your dashboard instead of the post category. Otherwise, ' .
              'the section value defaults to your post\'s category <br>' .
+        # Attempting to add custom fields dropdown
         add_custom_fields_dropdown();
         add_settings_field('use_custom_field_section',
                            'Use Custom Field for Section  <div class="help-icons"></div>',
